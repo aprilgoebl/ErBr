@@ -1,0 +1,126 @@
+---
+title: "ErBr_report"
+author: "Michelle DePrenger-Levin"
+date: "October 31, 2016"
+output: html_document
+---
+
+###Packages
+```{r}
+library(prism)
+library(ggplot2)
+library(raster)
+library(plotrix)
+library(devtools)
+library(RCurl)
+```
+
+Clean slate
+```{r}
+rm(list=ls(all=TRUE))
+
+```
+
+Functions   
+```{r}
+# StagePVA_Function.R
+script <- getURL("https://raw.githubusercontent.com/DenverBotanicGardens/PVA/master/CountPVASimple_Function.R",ssl.verifypeer = FALSE)
+eval(parse(text = script))
+
+```
+
+###Data    
+Download Raw Data and and Summary Table
+<https://research.botanicgardens.org/admin/>
+```{r}
+currentyr <- as.numeric(format(as.Date(Sys.Date(),format="%Y-%m-%d"), "%Y"))
+rawdatapath <- paste("Q:/Research/All_Projects_by_Species/Eriogonum SPECIES/Eriogonum_brandegeei/", 
+                     currentyr,"_ErBr/rawdata_",
+                     currentyr, ".csv", collapse = '', sep = '')
+
+erbr.raw <- read.csv(path.expand(rawdatapath), na.strings = "na")
+
+summarypath <- paste("Q:/Research/All_Projects_by_Species/Eriogonum SPECIES/Eriogonum_brandegeei/", 
+                     currentyr,"_ErBr/summarytable_",
+                     currentyr, ".csv", collapse = '', sep = '')
+erbr.summary <- read.csv(path.expand(summarypath), na.strings = "na")
+
+erbr.cleora <- erbr.summary[erbr.summary$Site == "Cleora" & erbr.summary$Year == 2004,]
+erbr.summary <- erbr.summary[erbr.summary$Site != "Cleora",]
+erbr.summary$Site <- factor(erbr.summary$Site)
+```
+
+# Climate Data
+just use the data downloaded for AsMi
+```{r}
+options(prism.path = "Q:/Research/All_Projects_by_Species/Astragalus SPECIES/Astragalus_microcymbus/PRISM_asmiclimate")
+
+erbrlatlong <- data.frame(Lat = 38.5434, Long = -105.2184)
+
+maxs <- grep("tmax", ls_prism_data(absPath=TRUE)[,2])
+mins <- grep("tmin", ls_prism_data(absPath = TRUE)[,2])
+ppt <- grep("ppt", ls_prism_data(absPath = TRUE)[,2])
+
+avgTemps.max <- lapply(maxs, function(x){
+  rastertemps <- raster(ls_prism_data(absPath=TRUE)[x,2])
+  data.frame(data = extract(rastertemps, erbrlatlong[,c("Long","Lat")]), date = ls_prism_data()[x,])
+})
+
+avgTemps.min <- lapply(mins, function(x){
+  rastertemps <- raster(ls_prism_data(absPath=TRUE)[x,2])
+  data.frame(data = extract(rastertemps, erbrlatlong[,c("Long","Lat")]), date = ls_prism_data()[x,])
+})
+
+avgPrecip <- lapply(ppt, function(x){
+  rastertemps <- raster(ls_prism_data(absPath=TRUE)[x,2])
+  data.frame(data = extract(rastertemps, erbrlatlong[,c("Long","Lat")]), date = ls_prism_data()[x,])
+})
+
+mins.avg <- do.call(rbind, avgTemps.min)
+maxs.avg <- do.call(rbind, avgTemps.max)
+ppt.avg <- do.call(rbind, avgPrecip)
+
+erbr.climate <- cbind(mins.avg,maxs.avg[,1],ppt.avg[,1])
+names(erbr.climate) <- c("tmin","date","tmax","ppt")
+
+#Pull out month and year
+#date is a factor
+erbr.climate$date <- as.character(erbr.climate$date)
+
+#split by _ select the YYYYMM numbers
+erbr.climate$Year <- as.numeric(substr(vapply(strsplit(erbr.climate$date, '_'), 
+                                   function(x) x[5], character(1)), 1,4))
+erbr.climate$Month <- as.numeric(substr(vapply(strsplit(erbr.climate$date, '_'), 
+                                   function(x) x[5], character(1)), 5,6))
+
+erbr.c <- erbr.climate[,-2]
+erbr.c$Prev12 <- erbr.c$Year
+erbr.c$Prev12[erbr.c$Month > 7] <- erbr.c$Year[erbr.c$Month > 7]+1
+```
+
+Demography    
+
+Figure 2
+```{r}
+ggplot(erbr.summary, aes(Year, SumOfRosettes,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean,
+               geom = "line")+
+  theme_bw() +
+  ylab("Average rosettes per transect")+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  
+
+```
+
