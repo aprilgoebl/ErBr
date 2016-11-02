@@ -1,71 +1,47 @@
 ## 	CountPVA Simple function
 
 # 	Extract variable:
-# Each lambda for the duration of the study as "Sitemu"	
-# r squared	as "R.sq"
+# Each lambda for the duration of the study as "mu"	
+# r squared	as "r2"
 # mu with lower and upper 95% CI as "mu.s" with three columns of "mu.s$fit", "mu.s$lwr", and "mu.s$upr" 
 # the set of year intervals of the start year of study and each consecutive addition of years as "years"
 #		"years$RangeStart" and "years$RangeEnd"
 # Lambda and the lower and upper 95% CIs as "growth.exp" with "growth.exp$fit", "growth.exp$lwr", and "growth.exp$upr"  
 
-#	To use the function, enter "CountPVA(x,y)
-#	x The column with the years of the study census
-#	y The column with the annual count (years can be missed, the counts are for the matching years in the x year column) 
+#	To use the function, (years can be missed, the counts are for the matching years in the x year column) 
+#	Years The column name with the years of the study census
+#	Count The column name with the annual count 
 
-CountPVAsimple <- function(Years,Count){
+CountPVA <- function(df,Years,Count){
 
-	Yrs <- length(unique(Years))
-	rsq <- c()
-	xvar <- c()
-	ySpecies <- c()
-	PVA.lm <- list()	
-	mu_sp <- c()
-	year.int <- c()
+Yrs <- df[,Years]
+Cnt <- df[,Count]
+				
+PVA.table <- lapply(1:(length(Cnt)-1), function(row){
+                x <- sqrt(Yrs[row+1] - Yrs[row])
+                y <- log10(Cnt[row+1]/Cnt[row])/x
+                cbind(x,y,year = Yrs[row])
+                })
+PVA.table <- do.call(rbind,PVA.table)
 
-		count1 <- Years
-		yrs <- length(count1)
-		
-		lapply(1:length(Count), function(row){
-		  x <- sqrt(Years[row+1] - Years[row])
-		  y <- log10(Count[row+1]/Count[row])/x
-		  
-		})
-		
-		
-			for(i in 1:(yrs-1)){
-				yr <- sqrt((Years[i+1]) - (Years[i]))
-				xvar <- rbind(xvar, yr)
-				y1 <- ( log10(Count[i+1]/Count[i]) )/yr
-				ySpecies <- rbind(ySpecies, y1)
-				PVA.table <<- data.frame(cbind(xvar = as.numeric(xvar),
-					ySpecies = as.numeric(ySpecies)))
-				year.int1 <- data.frame(cbind(RangeStart = min(Years), 
-					RangeEnd = Years[Yrs]))
-				PVA.lm <- lm(PVA.table[,2] ~ -1 + PVA.table[,1])
+# LM for each consecutive additional year 3 years on...
+pva.lm <- lapply(3:nrow(PVA.table), function(x){
+  lm(y ~ -1 + x, data = data.frame(PVA.table[1:x,]))
+})
 
-				mu_sp1 <- predict(PVA.lm, level= 0.95, 
-					interval = "confidence",
-					se.fit = T)
-			}
-	rsq <- data.frame(rbind(rsq, summary(PVA.lm)$adj.r.squared))	# pull R squared values from
-												# each year interval 1995-1999...
-	Sitemu <<- ySpecies
-		rm(ySpecies); rm(xvar); rm(PVA.table)
-		ySpecies <- c(); xvar <- c(); PVA.table <- list()
-	
-		mu_sp <- data.frame(rbind(mu_sp, mu_sp1$fit[1,]))
-		year.int <- data.frame(rbind(year.int, year.int1))
-	
+lapply(pva.lm, function(lm){
+  summary(lm)
+})
 
-	R.sq <<- rsq
-	colnames(R.sq) <<- "R.squared"
-	mu.s <<- mu_sp
-	colnames(mu.s) <<- c("fit", "lwr", "upr")
-	growth <<- mu_sp
-	years <<- year.int
-	growth.exp <<- exp(growth)
-	lambda <<- data.frame(cbind((min(years[,2])-3):(max(years[,2])-1),Sitemu))
-	
+mu_sp.l <- lapply(pva.lm, function(lm){
+  conf <- confint(lm, "x", level=0.95)
+  cbind(summary(lm)$coefficients[1], conf, summary(lm)$adj.r.squared)
+})
+mu_sp <- data.frame(matrix(unlist(mu_sp.l), nrow=nrow(df)-3, byrow=TRUE))
+names(mu_sp) <- c("mu","l95","u95","r2")
+mu_sp$StartYear <- Yrs[1]
+mu_sp$EndYear <- Yrs[4:nrow(df)]	
+mu_sp
 }
 
 
