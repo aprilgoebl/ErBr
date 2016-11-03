@@ -13,6 +13,7 @@ library(raster)
 library(plotrix)
 library(devtools)
 library(RCurl)
+library(scales)
 ```
 
 Clean slate
@@ -24,7 +25,8 @@ rm(list=ls(all=TRUE))
 Functions   
 ```{r}
 # StagePVA_Function.R
-script <- getURL("https://raw.githubusercontent.com/DenverBotanicGardens/PVA/master/CountPVASimple_Function.R",ssl.verifypeer = FALSE)
+script <- getURL("https://raw.githubusercontent.com/DenverBotanicGardens/ErBr/master/CountPVA.R",
+                 ssl.verifypeer = FALSE)
 eval(parse(text = script))
 
 ```
@@ -121,6 +123,252 @@ ggplot(erbr.summary, aes(Year, SumOfRosettes,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   theme(legend.justification=c(1,1), legend.position=c(1,1)) 
   
+
+```
+
+Count PVA
+```{r}
+gpe.summary <- aggregate(SumOfRosettes ~ Year,
+                         data = erbr.summary[erbr.summary$Site == "Garden Park East",], mean)
+gpw.summary <- aggregate(SumOfRosettes ~ Year,
+                         data = erbr.summary[erbr.summary$Site == "Garden Park West",], mean)
+
+GPE <- CountPVA(gpe.summary, "Year","SumOfRosettes")
+GPW <- CountPVA(gpw.summary, "Year","SumOfRosettes")
+
+sapply(GPE[,1:3], function(x) exp(x))
+sapply(GPW[,1:3], function(x) exp(x))
+```
+
+Figure 3a
+```{r}
+ggplot(erbr.summary, aes(Year, SumOfInfl,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               geom = "line")+
+  theme_bw() +
+  ggtitle("a)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab("Average inflorescences per transect")+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+
+
+```
+
+Figure 3b
+```{r}
+# inflorescences per rosette
+erbr.summary$InflperRos <- erbr.summary$SumOfInfl/erbr.summary$SumOfRosettes
+erbr.summary$InflperRos[is.na(erbr.summary$InflperRos)] <- 0
+
+ggplot(erbr.summary, aes(Year, InflperRos,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               geom = "line")+
+  theme_bw() +
+  ggtitle("b)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab("Average inflorescences per rosettes")+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+
+```
+
+Averages before and after 2011
+```{r}
+erbr.summary$drought <- "before"
+erbr.summary$drought[erbr.summary$Year > 2010] <- "after"
+erbr.summary$drought <- factor(erbr.summary$drought, levels = c("before","after"))
+
+agg.erbr <- aggregate(SumOfRosettes ~ Site + drought, data=erbr.summary, mean)
+agg.erbr$SE <- aggregate(SumOfRosettes ~ Site + drought, data=erbr.summary, std.error)[,3]
+```
+
+```{r}
+ggplot(agg.erbr, aes(drought,SumOfRosettes, colour = Site))+
+  geom_point()+
+  geom_errorbar(aes(ymax=SumOfRosettes + SE, ymin=SumOfRosettes - SE), width=0.1)+
+  theme_bw()+
+  xlab("Drought conditions (2011-2013)")+
+  ylab("Average rosettes")+
+  theme(legend.justification=c(1,1), legend.position=c(1,1))
+
+```
+
+Figure 4a
+```{r}
+ggplot(erbr.summary, aes( Year,SumOfArea,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               geom = "line")+
+  theme_bw() +
+  ggtitle("a)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Average basal area (cm"^2~") per transect"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+```
+
+Figure 4b
+```{r}
+erbr.summary$RosperArea <- erbr.summary$SumOfRosettes/erbr.summary$SumOfArea
+
+ggplot(erbr.summary, aes(Year,RosperArea,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               geom = "line")+
+  theme_bw() +
+  ggtitle("b)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Average rosettes per basal area (cm"^2~")"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+
+```
+
+Figure 4c
+```{r}
+erbr.summary$InflperArea <- erbr.summary$SumOfInfl/erbr.summary$SumOfArea
+
+ggplot(erbr.summary, aes(Year,InflperArea,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.5),
+               geom = "line")+
+  theme_bw() +
+  ggtitle("c)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Average inflorescences per basal area (cm"^2~")"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+
+```
+
+Figure 5a
+```{r}
+ggplot(erbr.summary, aes(Year,SumOfBrowsedInfl,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.25),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.25),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.25),
+               geom = "line")+
+  theme_bw() +
+  ggtitle("a)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab("Average browsed inflorescences per transect")+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+
+```
+
+Figure 5b
+```{r}
+erbr.summary$InflBrperInfl <- erbr.summary$SumOfBrowsedInfl/erbr.summary$SumOfInfl
+
+ggplot(erbr.summary, aes(Year,InflBrperInfl,colour = Site, shape = Site))+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.25),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "errorbar")+
+   stat_summary(fun.y = mean, position=position_dodge(width=0.25),
+               fun.ymin = function(x) mean(x) - std.error(x),
+               fun.ymax = function(x) mean(x) + std.error(x),
+               geom = "point")+
+  stat_summary(fun.y = mean, position=position_dodge(width=0.25),
+               geom = "line")+
+  theme_bw() +
+  ggtitle("b)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab("Percent browsed inflorescences")+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) +
+  scale_y_continuous(labels = percent)
+
+```
+
+Climate
+Garden Park
+```{r}
+#cutoff <- 0.65
+cutoff <- 0.75
+
+#### START HERE#### not by season, go by month maybe!?
+cor.table<-cor(erbr.c[,c(1:3)])
+data <- as.data.frame(as.table(cor.table))
+combins <- combn(colnames(cor.table),2,FUN=function(x) paste(x,collapse="_"))
+cor.data <- data[data$Var1 != data$Var2, ]
+data <- cor.data[paste(cor.data$Var1, cor.data$Var2, sep="_") %in% combins,]
+exclude <- paste(data$Var2[abs(data$Freq)>cutoff],sep=",")
+
+#Which are correlated? 
+data[abs(data$Freq)>cutoff,]
+
+tomatch <- c("Creek","Prev12",exclude)
+
+forpca <- season[,c(grep(paste(tomatch, collapse="|"),
+                            names(season), value=TRUE, invert=TRUE))]
+names(forpca)
 
 ```
 
