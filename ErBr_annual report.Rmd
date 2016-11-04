@@ -476,8 +476,91 @@ ggplot(maxtemp[maxtemp$Prev12>1994&maxtemp$Prev12<=currentyr,], aes(Prev12, tmax
 
 ```
 
-```{r}
 
+```{r}
+erbr.all <- merge(erbr.summary,precip, by.x = "Year", by.y = "Prev12")
+erbr.all <- merge(erbr.all, mintemp, by.x = "Year", by.y = "Prev12")
+erbr.all <- merge(erbr.all, maxtemp, by.x = "Year", by.y = "Prev12")
+```
+
+Transformations
+```{r}
+#log transformation
+hist(erbr.all$SumOfRosettes)
+hist(erbr.all$SumOfArea)
+hist(erbr.all$SumOfInfl)
+
+hist(log(erbr.all$SumOfRosettes+1))
+hist(log(erbr.all$SumOfArea+1))
+hist(log(erbr.all$SumOfInfl+1))
+
+erbr.all$logSumOfRosettes <- log(erbr.all$SumOfRosettes+1)
+erbr.all$logSumOfArea <- log(erbr.all$SumOfArea+1)
+erbr.all$logSumOfInfl <- log(erbr.all$SumOfInfl+1)
+
+#arcsine square root transformation
+hist(erbr.all$InflperRos)
+hist(erbr.all$RosperArea) #maybe not this one?
+hist(erbr.all$InflperArea)
+hist(erbr.all$InflBrperInfl)
+
+hist(asin(sqrt(erbr.all$InflperRos)/100))
+hist(asin(sqrt(erbr.all$RosperArea)/100)) #not all that much better
+hist(asin(sqrt(erbr.all$InflperArea)/100))
+hist(asin(sqrt(erbr.all$InflBrperInfl)/100))
+
+erbr.all$sinsqInflperRos <- asin(sqrt(erbr.all$InflperRos)/100)
+erbr.all$sinsqInflperArea <- asin(sqrt(erbr.all$InflperArea)/100)
+erbr.all$sinsqInflBrperInfl <- asin(sqrt(erbr.all$InflBrperInfl)/100)
+```
+
+
+
+
+```{r}
+step.lm <- step(lm(logSumOfRosettes ~ (ppt+tmin+tmax)^2, data = erbr.all))
+summary(step.lm)
+```
+
+## START HERE #### look at differences when tmin is above below mean
+```{r}
+ggplot(erbr.all[erbr.all$tmax > mean(erbr.all$tmax),],aes(tmin, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly minimum temperature (previous 12 months)")+
+  ylab("Rosettes per transect")
+
+```
+
+```{r}
+ggplot(erbr.all[erbr.all$tmax <= mean(erbr.all$tmax),], aes(tmin, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly minimum temperature (previous 12 months)")+
+  ylab("Rosettes per transect")
+
+```
+
+Maximum temperatre given above and below minimum temperature
+```{r}
+ggplot(erbr.all[erbr.all$tmin <= mean(erbr.all$tmin),], aes(tmax, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Rosettes per transect")
+
+```
+
+```{r}
+ggplot(erbr.all[erbr.all$tmin > mean(erbr.all$tmin),], aes(tmax, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Rosettes per transect")
 
 ```
 
