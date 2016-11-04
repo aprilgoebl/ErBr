@@ -349,26 +349,136 @@ ggplot(erbr.summary, aes(Year,InflBrperInfl,colour = Site, shape = Site))+
 
 Climate
 Garden Park
+seasons:   
+    Winter: November-January (11-1)      
+    Spring: February-April (2-4)   
+    Summer: May-July (5-7)   
+    Fall: August-October (8-10)   
 ```{r}
+erbr.c$season <- "winter"
+erbr.c$season[erbr.c$Month >1 & erbr.c$Month <5] <- "spring"
+erbr.c$season[erbr.c$Month >4 & erbr.c$Month <8] <- "summer"
+erbr.c$season[erbr.c$Month >7 & erbr.c$Month <11] <- "fall"
+
+erbr.c.summary <- aggregate(cbind(tmin,tmax,ppt)~season+Prev12, 
+                            data = erbr.c, mean, na.rm=TRUE)
+
 #cutoff <- 0.65
 cutoff <- 0.75
 
-#### START HERE#### not by season, go by month maybe!?
-cor.table<-cor(erbr.c[,c(1:3)])
+season <- reshape(erbr.c.summary[erbr.c.summary$Prev12 < currentyr+1 &
+                                   erbr.c.summary$Prev12 > 1994,],
+                  idvar="Prev12",
+                  timevar="season",
+                  direction="wide")
+
+cor.table<-cor(season[,-1])
 data <- as.data.frame(as.table(cor.table))
 combins <- combn(colnames(cor.table),2,FUN=function(x) paste(x,collapse="_"))
 cor.data <- data[data$Var1 != data$Var2, ]
 data <- cor.data[paste(cor.data$Var1, cor.data$Var2, sep="_") %in% combins,]
 exclude <- paste(data$Var2[abs(data$Freq)>cutoff],sep=",")
 
+# Correlated
+pairs(season[,c(grep(paste(exclude, collapse = "|"),
+                     names(season), value = TRUE))])
+
+# Not correlated??
+pairs(season[,c(grep(paste(exclude, collapse = "|"),
+                     names(season), value = TRUE, invert=TRUE))])
+
+
 #Which are correlated? 
 data[abs(data$Freq)>cutoff,]
 
-tomatch <- c("Creek","Prev12",exclude)
+tomatch <- c("Prev12",exclude)
 
 forpca <- season[,c(grep(paste(tomatch, collapse="|"),
-                            names(season), value=TRUE, invert=TRUE))]
+                         names(season), value=TRUE, invert=TRUE))]
 names(forpca)
+```
+
+```{r}
+erbr.pca <- princomp(forpca,cor=TRUE)
+summary(erbr.pca)
+erbr.load <- loadings(erbr.pca)
+erbr.pc <- predict(erbr.pca)
+
+erbr.pc <- data.frame(erbr.pc,season)
+erbr.pc$Drought <- "pre"
+erbr.pc$Drought[erbr.pc$Prev12 < 2011] <- "post"
 
 ```
+
+
+```{r}
+ggplot(erbr.pc, aes(Comp.1,Comp.2, colour = Drought, label = Prev12))+
+  geom_text(alpha = 0.75, angle = 45, size = 3) +
+  stat_ellipse()+
+  xlab("PC1 (26%)")+
+  ylab("PC2 (23%)")+
+  theme_bw()
+  
+
+```
+
+
+Figure 6
+```{r}
+precip <- aggregate(ppt~Prev12,
+                    data = erbr.c, sum)
+
+ggplot(precip[precip$Prev12>1994&precip$Prev12<=currentyr,], aes(Prev12, ppt))+
+  geom_line()+
+  theme_bw()+
+  geom_rect(aes(xmin=-Inf,xmax=2003.5,
+                ymin=-Inf, ymax=Inf),
+            fill= "grey", alpha = 0.03)+
+  scale_x_continuous(breaks = seq(1995,currentyr,by = 2))+
+  ylab("Annual precipition of previous 12 months")+
+  xlab("Survey year")+
+  ggtitle("a)") +
+  theme(plot.title=element_text(hjust=0))
+```
+
+```{r}
+mintemp <- aggregate(tmin~Prev12,
+                     data = erbr.c, mean)
+
+ggplot(mintemp[mintemp$Prev12>1994&mintemp$Prev12<=currentyr,], aes(Prev12, tmin))+
+  geom_line()+
+  theme_bw()+
+  geom_rect(aes(xmin=-Inf,xmax=2003.5,
+                ymin=-Inf, ymax=Inf),
+            fill= "grey", alpha = 0.03)+
+  scale_x_continuous(breaks = seq(1995,currentyr,by = 2))+
+  ylab("Average minimum temperature of previous 12 months")+
+  xlab("Survey year")+
+  ggtitle("b)") +
+  theme(plot.title=element_text(hjust=0))
+```
+
+```{r}
+maxtemp <- aggregate(tmax~Prev12,
+                     data = erbr.c, mean)
+
+ggplot(maxtemp[maxtemp$Prev12>1994&maxtemp$Prev12<=currentyr,], aes(Prev12, tmax))+
+  geom_line()+
+  theme_bw()+
+  geom_rect(aes(xmin=-Inf,xmax=2003.5,
+                ymin=-Inf, ymax=Inf),
+            fill= "grey", alpha = 0.03)+
+  scale_x_continuous(breaks = seq(1995,currentyr,by = 2))+
+  ylab("Average maximum temperature of previous 12 months")+
+  xlab("Survey year")+
+  ggtitle("c)") +
+  theme(plot.title=element_text(hjust=0))
+
+```
+
+```{r}
+
+
+```
+
 
