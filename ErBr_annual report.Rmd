@@ -537,29 +537,14 @@ cor(erbr.all[,c("tmin","tmax","ppt")])
 pairs(erbr.all[,c("tmin","tmax","ppt")])
 ```
 
-Fixed-effects model
-take x predictor (tmin) and split into two predictors, tminb  which will contain only between-cluster variation in x, and xw which will contain only within-cluster variation in x.
+## Dunno, I think I'll just report a straight lm
+log transformed sum of rosettes
 ```{r}
-#Average per site (which is the same as average over the years)
-erbr.dat <- within(erbr.all, tminb <- tapply(tmin, Site, mean)[paste(Site)])
-#Difference each year from the average
-erbr.dat <- within(erbr.dat, tminw <- tmin - tminb)
-
-erbr.mod <- lmer(logSumOfRosettes ~ tminb + tminw + (1|Site), data=erbr.dat)
-erbr.mod
-```
-
-
-```{r}
-rm(erbr.dat)
-# average per site y
-erbr.dat <- within(erbr.all, 
-                   logSumOfRosettesavg <- tapply(logSumOfRosettes, Site, mean)[paste(Site)])
-erbr.dat <- unique(erbr.dat[,c("Year","Site","logSumOfRosettesavg","tmin")])
-
-lmer(logSumOfRosettesavg ~ tmin + (1|Site), data = erbr.dat)
-
 lmer(logSumOfRosettes ~ tmin + (1|Site), data = erbr.all)
+
+summary(lm(logSumOfRosettes ~ tmin, data = erbr.all))
+
+summary(lm(logSumOfRosettes ~ ppt, data = erbr.all))
 ```
 
 
@@ -569,7 +554,170 @@ ggplot(erbr.all, aes(tmin, SumOfRosettes, colour = Site))+
   stat_smooth(method="lm")+
   theme_bw()+
   xlab(expression("Minimum temperature"~degree*C))+
-  ylab("Rosettes per transect")
+  ylab("Rosettes per transect")+
+  theme_bw() +
+  ggtitle("a)") +
+  theme(plot.title=element_text(hjust=0))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+
+```
+
+
+```{r}
+ggplot(erbr.all, aes(ppt, SumOfRosettes, colour = Site))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Precipitation mm")+
+  ylab("Rosettes per transect")+
+  theme_bw() +
+  ggtitle("") +
+  theme(plot.title=element_text(hjust=0))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1),
+        legend.background = element_rect(fill=alpha(0.4))) 
+
+```
+
+
+log transformed sum of inflorescences
+```{r}
+lmer(logSumOfInfl ~ tmin + (1|Site), data = erbr.all)
+summary(lm(logSumOfInfl ~ tmin, data = erbr.all))
+
+summary(lm(logSumOfInfl ~ ppt, data = erbr.all))
+```
+
+
+```{r}
+ggplot(erbr.all, aes(tmin, logSumOfInfl, colour = Site))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab(expression("Minimum temperature"~degree*C))+
+  theme_bw() +
+  ggtitle("b)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Inflorescences"["  log"]*" per transect"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1),
+        legend.background = element_rect(fill=alpha(0.4))) 
+
+```
+
+
+```{r}
+ggplot(erbr.all, aes(ppt, logSumOfInfl, colour = Site))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Precipitation mm")+
+  theme_bw() +
+  ggtitle("") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Inflorescences"["  log"]*" per transect"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(0.4,1), legend.position=c(0.4,1),
+        legend.background = element_rect(fill=alpha(0.2))) 
+
+```
+
+transformed inflorescences per rosette
+```{r}
+lmer(sinsqInflperRos ~ tmin + (1|Site), data = erbr.all)
+
+summary(lmer(sinsqInflperRos ~ tmin + (1|Site), data = erbr.all))
+
+summary(lm(sinsqInflperRos ~ tmin, data = erbr.all))
+
+
+summary(lm(sinsqInflperRos ~ ppt, data = erbr.all))
+```
+
+
+```{r}
+ggplot(erbr.all, aes(tmin, sinsqInflperRos, colour = Site))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab(expression("Minimum temperature"~degree*C))+
+  theme_bw() +
+  ggtitle("c)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Inflorescences per rosette"["  arcsine square root"]*" by transect"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1),
+        legend.background = element_rect(fill=alpha(0.4))) 
+
+```
+
+
+```{r}
+ggplot(erbr.all, aes(ppt, sinsqInflperRos, colour = Site))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Precipitation mm")+
+  theme_bw() +
+  ggtitle("") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Inflorescences per rosette"["  arcsine square root"]*" by transect"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(0.4,1), legend.position=c(0.4,1),
+        legend.background = element_rect(fill=alpha(0.4))) 
+
+```
+
+
+
+transformed browsed inflorescences per total inflor
+```{r}
+lmer(sinsqInflBrperInfl ~ tmin + (1|Site), data = erbr.all)
+
+summary(lmer(sinsqInflBrperInfl ~ tmin + (1|Site), data = erbr.all))
+
+summary(lm(sinsqInflBrperInfl ~ tmin, data = erbr.all))
+
+
+summary(lm(sinsqInflBrperInfl ~ ppt, data = erbr.all))
+```
+
+
+```{r}
+ggplot(erbr.all, aes(tmin, sinsqInflBrperInfl, colour = Site))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab(expression("Minimum temperature"~degree*C))+
+  theme_bw() +
+  ggtitle("c)") +
+  theme(plot.title=element_text(hjust=0))+
+  ylab(expression("Proportion of browsed inflorescences"["  arcsine square root"]*" by transect"))+
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1),
+        legend.background = element_rect(fill=alpha(0.4))) 
 
 ```
 
@@ -605,6 +753,8 @@ twoInfo <- lm(logSumOfInfl~(ppt+tmin)^2, data=erbr.all)
 vif(twoInfo)
 
 summary(lm(logSumOfInfl~tmin, data=erbr.all))
+
+summary(lm(logSumOfInfl~ppt, data=erbr.all))
 
 
 ```
