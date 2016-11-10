@@ -14,6 +14,8 @@ library(plotrix)
 library(devtools)
 library(RCurl)
 library(scales)
+library(car)
+library(lme4)
 ```
 
 Clean slate
@@ -428,8 +430,12 @@ Figure 6
 precip <- aggregate(ppt~Prev12,
                     data = erbr.c, sum)
 
+mean(precip$ppt)
+
 ggplot(precip[precip$Prev12>1994&precip$Prev12<=currentyr,], aes(Prev12, ppt))+
   geom_line()+
+  geom_hline(linetype = "dashed", aes(yintercept = mean(ppt)))+
+  annotate("text", x=1998, y=425, label=paste(round(mean(precip$ppt),0),"mm", sep=""))+
   theme_bw()+
   geom_rect(aes(xmin=-Inf,xmax=2003.5,
                 ymin=-Inf, ymax=Inf),
@@ -445,8 +451,14 @@ ggplot(precip[precip$Prev12>1994&precip$Prev12<=currentyr,], aes(Prev12, ppt))+
 mintemp <- aggregate(tmin~Prev12,
                      data = erbr.c, mean)
 
-ggplot(mintemp[mintemp$Prev12>1994&mintemp$Prev12<=currentyr,], aes(Prev12, tmin))+
+mintemp <- mintemp[mintemp$Prev12>1994&mintemp$Prev12<=currentyr,]
+
+mean(mintemp$tmin)
+
+ggplot(mintemp, aes(Prev12, tmin))+
   geom_line()+
+  geom_hline(linetype = "dashed", aes(yintercept = mean(tmin)))+
+  annotate("text", x=1995, y=mean(mintemp$tmin)+0.06, label= "2.3") +
   theme_bw()+
   geom_rect(aes(xmin=-Inf,xmax=2003.5,
                 ymin=-Inf, ymax=Inf),
@@ -462,8 +474,13 @@ ggplot(mintemp[mintemp$Prev12>1994&mintemp$Prev12<=currentyr,], aes(Prev12, tmin
 maxtemp <- aggregate(tmax~Prev12,
                      data = erbr.c, mean)
 
-ggplot(maxtemp[maxtemp$Prev12>1994&maxtemp$Prev12<=currentyr,], aes(Prev12, tmax))+
+maxtemp <- maxtemp[maxtemp$Prev12>1994&maxtemp$Prev12<=currentyr,]
+mean(maxtemp$tmax)
+
+ggplot(maxtemp, aes(Prev12, tmax))+
   geom_line()+
+  geom_hline(linetype = "dashed", aes(yintercept = mean(tmax)))+
+  annotate("text", x=1994.7, y=mean(maxtemp$tmax)+0.06, label= "17.95") +
   theme_bw()+
   geom_rect(aes(xmin=-Inf,xmax=2003.5,
                 ymin=-Inf, ymax=Inf),
@@ -514,15 +531,137 @@ erbr.all$sinsqInflperArea <- asin(sqrt(erbr.all$InflperArea)/100)
 erbr.all$sinsqInflBrperInfl <- asin(sqrt(erbr.all$InflBrperInfl)/100)
 ```
 
+```{r}
+cor(erbr.all$tmin,erbr.all$tmax)
+cor(erbr.all[,c("tmin","tmax","ppt")])
+pairs(erbr.all[,c("tmin","tmax","ppt")])
+```
 
+Fixed-effects model
+take x predictor (tmin) and split into two predictors, tminb  which will contain only between-cluster variation in x, and xw which will contain only within-cluster variation in x.
+```{r}
+#Average per site (which is the same as average over the years)
+erbr.dat <- within(erbr.all, tminb <- tapply(tmin, Site, mean)[paste(Site)])
+#Difference each year from the average
+erbr.dat <- within(erbr.dat, tminw <- tmin - tminb)
+
+erbr.mod <- lmer(logSumOfRosettes ~ tminb + tminw + (1|Site), data=erbr.dat)
+erbr.mod
+```
 
 
 ```{r}
+rm(erbr.dat)
+# average per site y
+erbr.dat <- within(erbr.all, 
+                   logSumOfRosettesavg <- tapply(logSumOfRosettes, Site, mean)[paste(Site)])
+erbr.dat <- unique(erbr.dat[,c("Year","Site","logSumOfRosettesavg","tmin")])
+
+lmer(logSumOfRosettesavg ~ tmin + (1|Site), data = erbr.dat)
+
+lmer(logSumOfRosettes ~ tmin + (1|Site), data = erbr.all)
+```
+
+
+```{r}
+ggplot(erbr.all, aes(tmin, SumOfRosettes, colour = Site))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab(expression("Minimum temperature"~degree*C))+
+  ylab("Rosettes per transect")
+
+```
+
+
+
+
+ppt and tmax more than ppt and tmin so keep tmin. but they are 71% so could keep both 
+```{r}
+erbr.all$ppt100 <- erbr.all$ppt/100
 step.lm <- step(lm(logSumOfRosettes ~ (ppt+tmin+tmax)^2, data = erbr.all))
+
+#Check for Multi-collinearity
+vif(step.lm) #Variance inflation factors
+sqrt(vif(step.lm)) > 2 # means a problem, so all are a problem
+
+#Remove tmax and keep going
+twolm <- lm(logSumOfRosettes ~ (ppt+tmin)^2, data = erbr.all)
+vif(twolm)
+
+step.lm <- step(lm(logSumOfRosettes ~ (ppt+tmin)^2, data = erbr.all))
+
 summary(step.lm)
 ```
 
-## START HERE #### look at differences when tmin is above below mean
+tmin only signficant one
+```{r}
+erbr.all$sinsqInflperRos
+erbr.all$logSumOfInfl
+
+summary(lm(logSumOfRosettes~tmin, data=erbr.all))
+
+twoInfo <- lm(logSumOfInfl~(ppt+tmin)^2, data=erbr.all)
+vif(twoInfo)
+
+summary(lm(logSumOfInfl~tmin, data=erbr.all))
+
+
+```
+
+
+```{r}
+step.lmsmall <- step(lm(logSumOfRosettes ~ (ppt+tmin)^2, data = erbr.all))
+summary(step.lmsmall)
+
+summary(lm(logSumOfRosettes~tmin, data=erbr.all))
+summary(lm(logSumOfRosettes~tmax, data=erbr.all))
+summary(lm(logSumOfRosettes~ppt, data=erbr.all))
+```
+
+#Precip not signficant but what does it look like?
+```{r}
+ggplot(erbr.all, aes(ppt, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Total precipitation (previous 12 months)")+
+  ylab("Rosettes per transect")
+
+```
+
+```{r}
+ggplot(erbr.all, aes(tmin, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab(expression("Minimum temperature"~degree*C))+
+  ylab("Rosettes per transect")
+
+```
+
+
+```{r}
+ggplot(erbr.all[erbr.all$tmin > mean(erbr.all$tmin),], aes(ppt, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Total precipitation (previous 12 months)")+
+  ylab("Rosettes per transect")
+
+```
+
+```{r}
+ggplot(erbr.all[erbr.all$tmin  <= mean(erbr.all$tmin),], aes(ppt, SumOfRosettes))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Total precipitation (previous 12 months)")+
+  ylab("Rosettes per transect")
+
+```
+
+
 ```{r}
 ggplot(erbr.all[erbr.all$tmax > mean(erbr.all$tmax),],aes(tmin, SumOfRosettes))+
   geom_point()+
@@ -564,4 +703,70 @@ ggplot(erbr.all[erbr.all$tmin > mean(erbr.all$tmin),], aes(tmax, SumOfRosettes))
 
 ```
 
+## Inflorescences
+```{r}
 
+ggplot(erbr.all[erbr.all$tmin <= mean(erbr.all$tmin),], aes(tmax, SumOfInfl))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Inflorescences per transect")
+
+```
+
+```{r}
+ggplot(erbr.all[erbr.all$tmin > mean(erbr.all$tmin),], aes(tmax, SumOfInfl))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Inflorescences per transect")
+
+```
+
+
+## Inflorescences
+```{r}
+
+ggplot(erbr.all[erbr.all$tmin <= mean(erbr.all$tmin),], aes(tmax, SumOfInfl))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Inflorescences per transect")
+
+```
+
+```{r}
+ggplot(erbr.all[erbr.all$tmin > mean(erbr.all$tmin),], aes(tmax, SumOfInfl))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Inflorescences per transect")
+
+```
+
+
+#InflperRos
+```{r}
+
+ggplot(erbr.all[erbr.all$tmin <= mean(erbr.all$tmin),], aes(tmax, InflperRos))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Inflorescences per rosettes")
+
+```
+
+```{r}
+ggplot(erbr.all[erbr.all$tmin > mean(erbr.all$tmin),], aes(tmax, InflperRos))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  xlab("Average monthly maximum temperature (previous 12 months)")+
+  ylab("Inflorescences per rosettes")
+
+```
