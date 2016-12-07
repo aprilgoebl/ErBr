@@ -102,6 +102,18 @@ erbr.c$Prev12 <- erbr.c$Year
 erbr.c$Prev12[erbr.c$Month > 7] <- erbr.c$Year[erbr.c$Month > 7]+1
 ```
 
+```{r}
+head(erbr.c)
+
+plotppt <- aggregate(erbr.climate$ppt, by=list(erbr.climate$Year), "sum" )
+
+ggplot(plotppt, aes(Group.1,x))+
+  geom_line()+
+  theme_bw()
+
+mean(plotppt$x)
+```
+
 Demography    
 
 Figure 2
@@ -919,4 +931,13 @@ ggplot(erbr.all[erbr.all$tmin > mean(erbr.all$tmin),], aes(tmax, InflperRos))+
   xlab("Average monthly maximum temperature (previous 12 months)")+
   ylab("Inflorescences per rosettes")
 
+```
+
+Appendix D:
+```{r}
+head(erbr.all)
+
+appdD <- erbr.all[erbr.all$Year == 2016,
+                  c("Site","Transect","Year","SumOfRosettes","SumOfInfl","SumOfArea",
+                     "SumOfBrowsedInfl","Rust")]
 ```
