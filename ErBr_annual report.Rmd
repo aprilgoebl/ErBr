@@ -4,6 +4,11 @@ author: "Michelle DePrenger-Levin"
 date: "October 31, 2016"
 output: html_document
 ---
+Clean slate
+```{r}
+rm(list=ls(all=TRUE))
+
+```
 
 ###Packages
 ```{r}
@@ -18,11 +23,6 @@ library(car)
 library(lme4)
 ```
 
-Clean slate
-```{r}
-rm(list=ls(all=TRUE))
-
-```
 
 Functions   
 ```{r}
@@ -114,7 +114,9 @@ ggplot(plotppt, aes(Group.1,x))+
 mean(plotppt$x)
 ```
 
-Demography    
+Demography     
+    
+    Was "SumOfRosettes"
 
 Figure 2
 ```{r}
@@ -135,7 +137,7 @@ ggplot(erbr.summary, aes(Year, SumOfRosettes,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank()) 
   
 
 ```
@@ -940,4 +942,19 @@ head(erbr.all)
 appdD <- erbr.all[erbr.all$Year == 2016,
                   c("Site","Transect","Year","SumOfRosettes","SumOfInfl","SumOfArea",
                      "SumOfBrowsedInfl","Rust")]
+```
+
+For Becky, annual report 01232018
+```{r}
+erbr_yr <- aggregate(Rosettes~Year, data=erbr.summary, FUN=sum)
+
+ggsave("Q:/Research/MEDL_folder/ErBr_yr.jpg",device="jpeg",
+       ggplot(erbr_yr, aes(Year,Rosettes))+
+         geom_line(colour="blue")+
+         ggtitle("Eriogonum brandegeei")+
+         theme_classic()+
+         ylab("Total Population"))
+
+write.csv(erbr_yr,"Q:/Research/MEDL_folder/ErBr_yr.csv" )
+
 ```
