@@ -177,7 +177,7 @@ ggplot(erbr.summary, aes(Year, SumOfInfl,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  theme(legend.justification=c(1,1), legend.position=c(1,1),legend.background = element_blank()) 
 
 
 ```
@@ -207,7 +207,7 @@ ggplot(erbr.summary, aes(Year, InflperRos,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank()) 
 
 ```
 
@@ -221,6 +221,7 @@ agg.erbr <- aggregate(SumOfRosettes ~ Site + drought, data=erbr.summary, mean)
 agg.erbr$SE <- aggregate(SumOfRosettes ~ Site + drought, data=erbr.summary, std.error)[,3]
 ```
 
+#Really? Those are defined as drought how?
 ```{r}
 ggplot(agg.erbr, aes(drought,SumOfRosettes, colour = Site))+
   geom_point()+
@@ -228,7 +229,11 @@ ggplot(agg.erbr, aes(drought,SumOfRosettes, colour = Site))+
   theme_bw()+
   xlab("Drought conditions (2011-2013)")+
   ylab("Average rosettes")+
-  theme(legend.justification=c(1,1), legend.position=c(1,1))
+  scale_color_manual(values=c("#000000","#7e7e7e"),
+                     labels = c("Garden Park East","Garden Park West"))+
+  scale_shape_manual(values=c(1,2),
+                     labels = c("Garden Park East","Garden Park West"))+
+  theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank())
 
 ```
 
@@ -253,7 +258,7 @@ ggplot(erbr.summary, aes( Year,SumOfArea,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank()) 
 ```
 
 Figure 4b
@@ -279,7 +284,7 @@ ggplot(erbr.summary, aes(Year,RosperArea,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank()) 
 
 ```
 
@@ -306,7 +311,7 @@ ggplot(erbr.summary, aes(Year,InflperArea,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank()) 
 
 ```
 
@@ -331,7 +336,7 @@ ggplot(erbr.summary, aes(Year,SumOfBrowsedInfl,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+  theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank()) 
 
 ```
 
@@ -358,7 +363,7 @@ ggplot(erbr.summary, aes(Year,InflBrperInfl,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   scale_shape_manual(values=c(1,2),
                      labels = c("Garden Park East","Garden Park West"))+
-  theme(legend.justification=c(1,1), legend.position=c(1,1)) +
+  theme(legend.justification=c(0,1), legend.position=c(0,1), legend.background = element_blank()) +
   scale_y_continuous(labels = percent)
 
 ```
@@ -380,7 +385,9 @@ erbr.c.summary <- aggregate(cbind(tmin,tmax,ppt)~season+Prev12,
                             data = erbr.c, mean, na.rm=TRUE)
 
 #cutoff <- 0.65
-cutoff <- 0.75
+#cutoff <- 0.75
+
+cutoff <- 0.5
 
 season <- reshape(erbr.c.summary[erbr.c.summary$Prev12 < currentyr+1 &
                                    erbr.c.summary$Prev12 > 1994,],
@@ -449,7 +456,7 @@ mean(precip$ppt)
 ggplot(precip[precip$Prev12>1994&precip$Prev12<=currentyr,], aes(Prev12, ppt))+
   geom_line()+
   geom_hline(linetype = "dashed", aes(yintercept = mean(ppt)))+
-  annotate("text", x=1998, y=425, label=paste(round(mean(precip$ppt),0),"mm", sep=""))+
+  annotate("text", x=1998, y=mean(precip$ppt)-5, label=paste(round(mean(precip$ppt),0),"mm", sep=""))+
   theme_bw()+
   geom_rect(aes(xmin=-Inf,xmax=2003.5,
                 ymin=-Inf, ymax=Inf),
