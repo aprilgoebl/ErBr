@@ -120,6 +120,9 @@ Demography
 
 Figure 2
 ```{r}
+jpeg("Q:/Research/All_Projects_by_Species/Eriogonum SPECIES/Eriogonum_brandegeei/2018_ErBr/Fig2.jpg",
+     width=250, height=125,units='mm', res=300)
+
 ggplot(erbr.summary, aes(Year, SumOfRosettes,colour = Site, shape = Site))+
   stat_summary(fun.y = mean, position=position_dodge(width=0.5),
                fun.ymin = function(x) mean(x) - std.error(x),
@@ -139,7 +142,7 @@ ggplot(erbr.summary, aes(Year, SumOfRosettes,colour = Site, shape = Site))+
                      labels = c("Garden Park East","Garden Park West"))+
   theme(legend.justification=c(1,1), legend.position=c(1,1), legend.background = element_blank()) 
   
-
+dev.off()
 ```
 
 Count PVA
